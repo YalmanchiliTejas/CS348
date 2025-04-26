@@ -1,9 +1,39 @@
 from flask import Blueprint, jsonify, request
 from models import database, Doctor
 from config import Config
-from sqlalchemy import text
+from sqlalchemy import text, distinct
 
 doctors_bp = Blueprint('doctors', __name__)
+
+
+@doctors_bp.route('/all', methods=['GET'])
+def get_all_doctors():
+    try:
+        doctors = Doctor.query.with_entities(Doctor.id, Doctor.name, Doctor.specialization).all()
+        # Return only necessary fields for the dropdown
+        doctor_list = [{'id': doctor.id, 'name': doctor.name, 'specialization': doctor.specialization} for doctor in doctors]
+        return jsonify({"doctors": doctor_list}), 200
+    except Exception as e:
+        print(f"Error fetching all doctors: {str(e)}")
+        return jsonify({'message': 'Error fetching doctors list', 'error': str(e)}), 500
+    
+
+@doctors_bp.route('/specializations', methods=['GET'])
+def get_specializations():
+    try:
+        # Query distinct, non-null, non-empty specializations from the Doctor table
+        specializations_query = database.session.query(distinct(Doctor.specialization)).filter(
+            Doctor.specialization.isnot(None),
+            Doctor.specialization != ''
+        ).order_by(Doctor.specialization)
+
+        # Extract the string values from the result tuples
+        specialization_list = [spec[0] for spec in specializations_query.all()]
+
+        return jsonify({"specializations": specialization_list}), 200
+    except Exception as e:
+        print(f"Error fetching specializations: {str(e)}")
+        return jsonify({'message': 'Error fetching specializations list', 'error': str(e)}), 500
 
 @doctors_bp.route('/<int:id>', methods=['GET'])
 def get_doctors(id):

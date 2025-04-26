@@ -81,3 +81,17 @@ export async function fetchReport(filters) {
     const response = await axios.patch(`${API_BASE_URL}/doctors/${doctorId}`, { hospital_id });
     return response.data;
   }
+
+
+  export const getAllDoctors = async () => {
+    const response = await axios.get(`${API_BASE_URL}/doctors/all`);
+    console.log("Get All Doctors response", response); // Logging for debugging
+    return response; // Return the full Axios response object
+  };
+  
+  // --- NEW: Fetch all distinct specializations for reporting filter ---
+  export const getSpecializations = async () => {
+    const response = await axios.get(`${API_BASE_URL}/doctors/specializations`);
+    console.log("Get Specializations response", response); // Logging for debugging
+    return response; // Return the full Axios response object
+  };
