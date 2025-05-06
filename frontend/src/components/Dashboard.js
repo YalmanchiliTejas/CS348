@@ -11,11 +11,18 @@ import ReviewList from './ReviewList'; // Import ReviewList
 function Dashboard() {
   const { user } = useContext(UserContext);
   const [selectedHospitalId, setSelectedHospitalId] = useState(null);
+  const [reviewUpdateCounter, setReviewUpdateCounter] = useState(0);
 
   const handleSelectHospital = (hospitalId) => {
     setSelectedHospitalId(hospitalId);
+    setReviewUpdateCounter(0); 
   };
 
+  const handleReviewAdded = () => {
+    console.log("Dashboard: Review added successfully! Triggering list refresh.");
+    // Incrementing the counter changes the refreshKey prop for ReviewList
+    setReviewUpdateCounter(prevCounter => prevCounter + 1);
+  };
   return (
     <div>
       <h2>Dashboard</h2>
@@ -40,9 +47,9 @@ function Dashboard() {
               {selectedHospitalId && (
                 <>
                   <h3>Submit a Review</h3>
-                  <ReviewForm hospitalId={selectedHospitalId} />
+                  <ReviewForm hospitalId={selectedHospitalId}  onReviewSuccess={handleReviewAdded} />
                   <h3>Previous Reviews</h3>
-                  <ReviewList hospitalId={selectedHospitalId} />
+                  <ReviewList hospitalId={selectedHospitalId} reviewCounter={reviewUpdateCounter} />
                 </>
               )}
               <h3>Review Report</h3>

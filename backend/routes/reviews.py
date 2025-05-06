@@ -1,4 +1,5 @@
 import datetime
+import traceback
 from flask import Blueprint, jsonify, request
 from models import Review, ReviewDoctors, database
 from sqlalchemy import text
@@ -48,39 +49,6 @@ def get_reviews():
     return jsonify({'reviews': review_list}), 200
 
 
-# @reviews_bp.route('/filterReviews', methods=['GET'])
-# def filter_reviews():
-#     # Retrieve query parameters
-#     hospital_id = request.args.get('hospital_id')
-#     doctor_id = request.args.get('doctor_id')
-
-#     # Validate input
-#     if not hospital_id and not doctor_id:
-#         return jsonify({'message': 'Please provide at least one filter parameter (hospital_id or doctor_id)!'}), 400
-
-#     try:
-#         # Log the input parameters
-#         print("Hospital ID:", hospital_id)
-#         print("Doctor ID:", doctor_id)
-
-#         # Execute the stored procedure
-#         query = text("CALL GetFilteredReviews(:in_hospital_id, :in_doctor_id)")
-#         result = database.session.execute(query, {'in_hospital_id': hospital_id, 'in_doctor_id': doctor_id})
-
-#         # Fetch column names
-#         keys = result.keys()
-
-#         # Process the results
-#         reviews = [
-#             dict(zip(keys, row))  # Map tuple values to column names
-#             for row in result
-#         ]
-#         print(reviews)
-#         return jsonify({'reviews': reviews}), 200
-#     except Exception as e:
-#         # Log the error
-#         print("Error in filter_reviews:", str(e))
-#         return jsonify({'message': 'Error fetching reviews', 'error': str(e)}), 500
 
 
 
@@ -144,3 +112,5 @@ def filter_reviews():
         return jsonify({'message': 'Error fetching reviews', 'error': str(e)}), 500
 
 
+
+   

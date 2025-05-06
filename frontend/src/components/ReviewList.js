@@ -1,22 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { fetchReport } from '../services/api';
 
-function ReviewList({ hospitalId }) {
+function ReviewList({ hospitalId, reviewCounter }) {
   const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
     const loadReviews = async () => {
       // Fetch reviews filtered by the given hospitalId.
-      const data = await fetchReport({ hospital_id: hospitalId });
+      const data = await fetchReport({ hospital_id: hospitalId});
 
 
       console.log(data);
       setReviews(data.reviews || []);
     };
-    if (hospitalId) {
+    if (hospitalId && reviewCounter >= 0) {
       loadReviews();
     }
-  }, [hospitalId]);
+  }, [hospitalId, reviewCounter]);
 
   return (
     <div>

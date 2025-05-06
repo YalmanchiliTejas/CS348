@@ -19,10 +19,31 @@ def get_all_doctors():
     
 
 @doctors_bp.route('/specializations', methods=['GET'])
-def get_specializations():
+# def get_specializations():
+#     try:
+#         # Query distinct, non-null, non-empty specializations from the Doctor table
+#         specializations_query = database.session.query(distinct(Doctor.specialization)).filter(
+#             Doctor.specialization.isnot(None),
+#             Doctor.specialization != ''
+#         ).order_by(Doctor.specialization)
+
+#         # Extract the string values from the result tuples
+#         specialization_list = [spec[0] for spec in specializations_query.all()]
+
+#         return jsonify({"specializations": specialization_list}), 200
+#     except Exception as e:
+#         print(f"Error fetching specializations: {str(e)}")
+#         return jsonify({'message': 'Error fetching specializations list', 'error': str(e)}), 500
+def get_specializations(): # Or rename to get_filtered_specializations
+    hospital_id = request.args.get('hospital_id', type=int) # Get hospital_id from query param
+    if not hospital_id:
+         # Return empty list or error if hospital_id is required
+        return jsonify({'message': 'hospital_id query parameter is required'}), 400
+
     try:
-        # Query distinct, non-null, non-empty specializations from the Doctor table
+        # Query distinct, non-null, non-empty specializations FILTERED BY hospital_id
         specializations_query = database.session.query(distinct(Doctor.specialization)).filter(
+            Doctor.hospital_id == hospital_id, # Filter by hospital
             Doctor.specialization.isnot(None),
             Doctor.specialization != ''
         ).order_by(Doctor.specialization)
@@ -32,7 +53,7 @@ def get_specializations():
 
         return jsonify({"specializations": specialization_list}), 200
     except Exception as e:
-        print(f"Error fetching specializations: {str(e)}")
+        print(f"Error fetching specializations for hospital {hospital_id}: {str(e)}")
         return jsonify({'message': 'Error fetching specializations list', 'error': str(e)}), 500
 
 @doctors_bp.route('/<int:id>', methods=['GET'])

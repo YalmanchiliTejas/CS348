@@ -1,358 +1,373 @@
-// import React, { useState } from 'react';
-// import { fetchReport } from '../services/api';
-
-// function Report() {
-//   const [filters, setFilters] = useState({
-//     start_date: '',
-//     end_date: '',
-//     hospital_id: '',
-//     city: '',
-//     doctor_id: '',
-//     specialization: '',
-//   });
-//   const [reportData, setReportData] = useState([]);
-
-//   const handleChange = (e) => {
-//     setFilters({ ...filters, [e.target.name]: e.target.value });
-//   };
-
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-//     const data = await fetchReport(filters);
-//     setReportData(data.reviews || []);
-//   };
-
-//   return (
-//     <div>
-//       <h4>Generate Review Report</h4>
-//       <form onSubmit={handleSubmit}>
-//         <label>Hospital ID (to view reviews for a specific hospital):</label>
-//         <br />
-//         <input
-//           type="text"
-//           name="hospital_id"
-//           value={filters.hospital_id}
-//           onChange={handleChange}
-//           placeholder="Enter hospital ID"
-//         />
-//         <br />
-//         <label>Start Date (YYYY-MM-DD):</label>
-//         <br />
-//         <input
-//           type="text"
-//           name="start_date"
-//           value={filters.start_date}
-//           onChange={handleChange}
-//           placeholder="2025-01-01"
-//         />
-//         <br />
-//         <label>End Date (YYYY-MM-DD):</label>
-//         <br />
-//         <input
-//           type="text"
-//           name="end_date"
-//           value={filters.end_date}
-//           onChange={handleChange}
-//           placeholder="2025-12-31"
-//         />
-//         <br />
-//         <label>City:</label>
-//         <br />
-//         <input
-//           type="text"
-//           name="city"
-//           value={filters.city}
-//           onChange={handleChange}
-//         />
-//         <br />
-//         <label>Doctor ID:</label>
-//         <br />
-//         <input
-//           type="text"
-//           name="doctor_id"
-//           value={filters.doctor_id}
-//           onChange={handleChange}
-//         />
-//         <br />
-//         <label>Specialization:</label>
-//         <br />
-//         <input
-//           type="text"
-//           name="specialization"
-//           value={filters.specialization}
-//           onChange={handleChange}
-//         />
-//         <br />
-//         <button type="submit">Generate Report</button>
-//       </form>
-//       <hr />
-//       <h4>Review Report</h4>
-//       {reportData.length > 0 ? (
-//         <ul>
-//           {reportData.map((review) => (
-//             <li key={review.review_id}>
-//               <strong>Review ID:</strong> {review.review_id} | <strong>Rating:</strong> {review.rating} | <strong>Date:</strong> {review.review_date} <br />
-//               <strong>Hospital:</strong> {review.hospital_name} | <strong>City:</strong> {review.city} | <strong>State:</strong> {review.state} <br />
-//               <strong>Doctor:</strong> {review.doctor_name} | <strong>Specialization:</strong> {review.specialization} <br />
-//               <strong>Comment:</strong> {review.review ? review.review : 'No comment'}
-//             </li>
-//           ))}
-//         </ul>
-//       ) : (
-//         <p>No reviews found.</p>
-//       )}
-//     </div>
-//   );
-// }
-
-// export default Report;
-
 
 import React, { useState, useEffect } from 'react';
-// Import the updated API functions
-import { fetchReport, getHospitals, getAllDoctors, getSpecializations } from '../services/api';
+// Import API functions - Assume these exist and are correctly implemented
+// to handle network requests and return promises.
+import { fetchReport, getHospitals, fetchDoctors, getSpecializations } from '../services/api';
 
 function Report() {
   // State for filter values
   const [filters, setFilters] = useState({
     start_date: '',
     end_date: '',
-    hospital_id: '', // Use '' for 'All'
+    hospital_id: '',
     city: '',
-    doctor_id: '', // Use '' for 'All'
-    specialization: '', // Use '' for 'All'
+    doctor_id: '',
+    specialization: '',
   });
 
-  // State for filter options fetched from the backend
+  // State for filter dropdown options
   const [hospitalOptions, setHospitalOptions] = useState([]);
   const [doctorOptions, setDoctorOptions] = useState([]);
   const [specializationOptions, setSpecializationOptions] = useState([]);
 
-  // State for the fetched report data (reviews)
+  // State for report data & stats
   const [reportData, setReportData] = useState([]);
-  // State for calculated statistics
-  const [reportStats, setReportStats] = useState({
-    averageRating: null,
-    reviewCount: 0,
-    // You could add more here if your stored procedure returns relevant data
-    // e.g., averageDuration: null, avgInvited: null, avgAccepted: null, avgAttendanceRate: null
-  });
+  const [reportStats, setReportStats] = useState({ averageRating: null, reviewCount: 0 });
 
-  // State for loading and errors
+  // Loading / error states
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [isLoadingReport, setIsLoadingReport] = useState(false);
-  const [error, setError] = useState(null); // Single error state for simplicity
+  const [error, setError] = useState(null);
 
-  // Fetch options for filters on component mount
+  // --- Effects ---
+
+  // 1. Fetch all hospitals once on component mount
   useEffect(() => {
-    const loadFilterOptions = async () => {
+    let isMounted = true;
+    const loadHospitals = async () => {
       setIsLoadingOptions(true);
-      setError(null); // Clear previous errors
+      setError(null);
       try {
-        // Fetch all necessary options concurrently
-        const [hospitalsRes, doctorsRes, specsRes] = await Promise.all([
-          getHospitals().catch(e => { console.error("Failed hospital fetch:", e); return { hospitals: [] }; }), // Add individual catch blocks
-          getAllDoctors().catch(e => { console.error("Failed doctor fetch:", e); return { doctors: [] }; }),
-          getSpecializations().catch(e => { console.error("Failed specs fetch:", e); return { specializations: [] }; })
-        ]);
+        const res = await getHospitals();
+        // **Enhanced Logging**: Log the raw response to debug structure issues
+        console.log('getHospitals response:', res);
 
-        setHospitalOptions(hospitalsRes?.hospitals || []);
-        setDoctorOptions(doctorsRes?.doctors || []);
-        setSpecializationOptions(specsRes?.specializations || []);
+        // **Safe Access**: Handle potential variations in API response structure
+        // Accommodates data nested under 'data' or directly in the response object.
+        const hospitals = res?.hospitals ?? [];; // Added res ?? []
 
-      } catch (err) { // Catch errors from Promise.all if any promises reject without individual catch
-        console.error("Error loading filter options:", err);
-        setError("Failed to load filter options. Please try again.");
+        if (isMounted) {
+           setHospitalOptions(hospitals);
+        }
+      } catch (err) {
+        console.error('Failed hospital fetch:', err);
+        // **Enhanced Error Logging**: Log the error object and potential response data
+        console.error('Error details (getHospitals):', err.response?.data);
+        if (isMounted) {
+           setError(err.message || 'Failed to load hospitals');
+        }
       } finally {
-        setIsLoadingOptions(false);
+        if (isMounted) {
+           setIsLoadingOptions(false);
+        }
       }
     };
-    loadFilterOptions();
-  }, []); // Empty dependency array means run once on mount
+    loadHospitals();
+    // Cleanup function to prevent state updates on unmounted component
+    return () => { isMounted = false; };
+  }, []); // Empty dependency array ensures this runs only once on mount
 
-  // Handle changes in filter inputs/selects
-  const handleChange = (e) => {
-    setFilters({ ...filters, [e.target.name]: e.target.value });
-  };
+  // 2. Fetch doctors and specializations when hospital_id filter changes
+  useEffect(() => {
+    const { hospital_id } = filters;
 
-  // Calculate statistics whenever reportData changes
+    // Reset dependent dropdown options and selected values
+    setDoctorOptions([]);
+    setSpecializationOptions([]);
+    // Only reset doctor/spec *values* if a hospital was previously selected
+    // Avoids resetting if the initial state is empty hospital_id
+    if (filters.doctor_id || filters.specialization) {
+        setFilters(f => ({ ...f, doctor_id: '', specialization: '' }));
+    }
+
+
+    // Only proceed if a hospital is actually selected
+    if (!hospital_id) return;
+
+    let isMounted = true;
+    const loadDependentOptions = async () => {
+      setIsLoadingOptions(true);
+      setError(null); // Clear previous errors related to options loading
+      try {
+        // Fetch doctors and specializations concurrently for the selected hospital
+        // Added basic catch blocks to prevent Promise.all failing if one request fails
+        const [docsRes, specsRes] = await Promise.all([
+          fetchDoctors(hospital_id).catch(e => { console.error("Fetch doctors error:", e); return null; }), // Return null on error
+          getSpecializations(hospital_id).catch(e => { console.error("Fetch specializations error:", e); return null; }), // Return null on error
+        ]);
+
+        // **Enhanced Logging**: Log raw responses
+        console.log('fetchDoctors response:', docsRes);
+        console.log('getSpecializations response:', specsRes);
+
+        // **Safe Access**: Handle variations and potential null responses from failed fetches
+        const doctors = docsRes?.data?.doctors ?? docsRes?.doctors ?? docsRes ?? []; // Added docsRes ?? []
+        const specs = specsRes?.data?.specializations ?? specsRes?.specializations ?? specsRes ?? []; // Added specsRes ?? []
+
+        if (isMounted) {
+          setDoctorOptions(doctors);
+          setSpecializationOptions(specs);
+        }
+      } catch (err) {
+        // Catch any unexpected errors during the Promise.all or state updates
+        console.error('Error loading dependent doctors/specializations:', err);
+         // **Enhanced Error Logging**
+        console.error('Error details (loadDependentOptions):', err.response?.data);
+        if (isMounted) {
+           setError(err.message || 'Failed to load doctors or specializations');
+        }
+      } finally {
+        if (isMounted) {
+           setIsLoadingOptions(false);
+        }
+      }
+    };
+
+    loadDependentOptions();
+    // Cleanup function
+    return () => { isMounted = false; };
+  }, [filters.hospital_id]); // Dependency array ensures this runs when hospital_id changes
+
+  // 3. Recalculate statistics when report data changes
   useEffect(() => {
     if (reportData && reportData.length > 0) {
-      const totalRating = reportData.reduce((sum, review) => {
-        // Ensure rating is treated as a number, default to 0 if invalid
-        const rating = Number(review.rating);
-        return sum + (isNaN(rating) ? 0 : rating);
-      }, 0);
-      const avgRating = reportData.length > 0 ? totalRating / reportData.length : 0;
-
-      // --- Placeholder for other stats (Adapt if your SP returns necessary data) ---
-      // Example: if your SP returns 'duration', 'invited_count', 'accepted_count', 'attended_count'
-      /*
-      const totalDuration = reportData.reduce((sum, review) => sum + (Number(review.duration) || 0), 0);
-      const avgDuration = reportData.length > 0 ? totalDuration / reportData.length : 0;
-
-      const totalInvited = reportData.reduce((sum, review) => sum + (Number(review.invited_count) || 0), 0);
-      const avgInvited = reportData.length > 0 ? totalInvited / reportData.length : 0;
-
-      const totalAccepted = reportData.reduce((sum, review) => sum + (Number(review.accepted_count) || 0), 0);
-      const avgAccepted = reportData.length > 0 ? totalAccepted / reportData.length : 0;
-
-      // Calculate attendance rate per review, then average the rates
-      let totalAttendanceRate = 0;
-      let validReviewsForRate = 0;
-      reportData.forEach(review => {
-          const invited = Number(review.invited_count) || 0;
-          const attended = Number(review.attended_count) || 0;
-          if (invited > 0) {
-              totalAttendanceRate += (attended / invited);
-              validReviewsForRate++;
-          }
-      });
-      const avgAttendanceRate = validReviewsForRate > 0 ? (totalAttendanceRate / validReviewsForRate) * 100 : 0; // As percentage
-      */
-      // --- End Placeholder ---
-
+      const totalRating = reportData.reduce((sum, review) => sum + Number(review.rating || 0), 0);
+      const average = totalRating / reportData.length;
       setReportStats({
-        averageRating: avgRating.toFixed(2), // Format to 2 decimal places
+        averageRating: average.toFixed(2), // Format to 2 decimal places
         reviewCount: reportData.length,
-        // avgDuration: avgDuration.toFixed(1),
-        // avgInvited: avgInvited.toFixed(1),
-        // avgAccepted: avgAccepted.toFixed(1),
-        // avgAttendanceRate: avgAttendanceRate.toFixed(1) + '%',
       });
     } else {
-      // Reset stats if no data
-      setReportStats({ averageRating: null, reviewCount: 0 /*, other stats: null */ });
+      // Reset stats if there's no data
+      setReportStats({ averageRating: null, reviewCount: 0 });
     }
-  }, [reportData]);
+  }, [reportData]); // Dependency array ensures this runs when reportData updates
 
+  // --- Handlers ---
 
-  // Handle form submission to generate the report
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Handle changes in any filter input/select
+  const handleChange = e => {
+    const { name, value } = e.target;
+    setFilters(f => ({ ...f, [name]: value }));
+  };
+
+  // Handle form submission to fetch the report
+  const handleSubmit = async e => {
+    e.preventDefault(); // Prevent default form submission
     setIsLoadingReport(true);
-    setError(null);
-    setReportData([]); // Clear previous results
-
-    // Use the filters state directly, the backend handles None/empty values
+    setError(null); // Clear previous report errors
+    setReportData([]); // Clear previous report data
     try {
-      console.log("Fetching report with filters:", filters);
-      const data = await fetchReport(filters); // Pass filters object directly
-      setReportData(data.reviews || []); // Update report data
-      if (!data.reviews || data.reviews.length === 0) {
-         // Set an informational message if no results, not necessarily an error
-         // setError("No reviews found matching the criteria."); // Optional: could display in results area instead
-      }
+      // Pass all current filters to the API
+      const res = await fetchReport(filters);
+      // **Enhanced Logging**: Log the raw response
+      console.log('fetchReport response:', res);
+
+      // **Safe Access**: Handle variations in API response structure
+      const reviews = res?.data?.reviews ?? res?.reviews ?? res ?? []; // Added res ?? []
+      setReportData(reviews);
+
     } catch (err) {
-      console.error("Error fetching report:", err);
-      setError(`Failed to generate report: ${err.message || 'Server error'}`);
-      setReportData([]); // Ensure data is empty on error
+        // **Enhanced Error Logging**: Try to get a meaningful error message
+        console.error('Failed to fetch report:', err);
+        console.error('Error details (fetchReport):', err.response?.data);
+        const errorMessage = err.response?.data?.message ?? err.message ?? 'An unknown server error occurred while fetching the report.';
+        setError(errorMessage);
     } finally {
       setIsLoadingReport(false);
     }
   };
 
+  // --- Render JSX ---
   return (
-    <div>
-      <h4>Generate Review Report</h4>
+    <div style={{ fontFamily: 'Arial, sans-serif', padding: '20px' }}>
+      <h4 style={{ borderBottom: '1px solid #ccc', paddingBottom: '10px' }}>Generate Review Report</h4>
       <form onSubmit={handleSubmit}>
-        {/* --- Filter UI Elements --- */}
-        {/* Date Range Filters */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', marginBottom: '10px' }}>
-          <div>
-            <label htmlFor="start_date">Start Date:</label><br />
-            <input id="start_date" type="date" name="start_date" value={filters.start_date} onChange={handleChange} style={{ padding: '5px' }} />
-          </div>
-          <div>
-            <label htmlFor="end_date">End Date:</label><br />
-            <input id="end_date" type="date" name="end_date" value={filters.end_date} onChange={handleChange} style={{ padding: '5px' }} />
-          </div>
-        </div>
+        {/* Filter Controls Section */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '20px' }}>
+            {/* Date Range Pickers */}
+            <div>
+                <label htmlFor="start_date" style={{ display: 'block', marginBottom: '5px' }}>Start Date:</label>
+                <input
+                id="start_date"
+                type="date"
+                name="start_date"
+                value={filters.start_date}
+                onChange={handleChange}
+                style={{ padding: '8px', width: '100%', boxSizing: 'border-box' }}
+                />
+            </div>
+            <div>
+                <label htmlFor="end_date" style={{ display: 'block', marginBottom: '5px' }}>End Date:</label>
+                <input
+                id="end_date"
+                type="date"
+                name="end_date"
+                value={filters.end_date}
+                onChange={handleChange}
+                style={{ padding: '8px', width: '100%', boxSizing: 'border-box' }}
+                />
+            </div>
 
-        {/* Hospital Filter Dropdown */}
-        <div style={{ marginBottom: '10px' }}>
-          <label htmlFor="hospital_id">Hospital:</label><br />
-          <select id="hospital_id" name="hospital_id" value={filters.hospital_id} onChange={handleChange} disabled={isLoadingOptions} style={{ padding: '5px', minWidth: '200px', maxWidth: '100%' }}>
-            <option value="">-- All Hospitals --</option>
-            {hospitalOptions.map((h) => <option key={h.id} value={h.id}>{h.name} ({h.city})</option>)}
-          </select>
-        </div>
+            {/* Hospital Select */}
+            <div>
+                <label htmlFor="hospital_id" style={{ display: 'block', marginBottom: '5px' }}>Hospital:</label>
+                <select
+                id="hospital_id"
+                name="hospital_id"
+                value={filters.hospital_id}
+                onChange={handleChange}
+                disabled={isLoadingOptions} // Disable while loading any options
+                style={{ padding: '8px', width: '100%', boxSizing: 'border-box' }}
+                >
+                <option value="">-- All Hospitals --</option>
+                {hospitalOptions.map(hospital => (
+                    <option key={hospital.id} value={hospital.id}>
+                    {hospital.name} ({hospital.city})
+                    </option>
+                ))}
+                </select>
+            </div>
 
-        {/* City Filter */}
-        <div style={{ marginBottom: '10px' }}>
-          <label htmlFor="city">City:</label><br />
-          <input id="city" type="text" name="city" value={filters.city} onChange={handleChange} placeholder="Filter by city" style={{ padding: '5px', boxSizing: 'border-box' }} />
-        </div>
+            {/* City Input Filter (Independent) */}
+             <div>
+                <label htmlFor="city" style={{ display: 'block', marginBottom: '5px' }}>City:</label>
+                <input
+                    id="city"
+                    type="text"
+                    name="city"
+                    value={filters.city}
+                    onChange={handleChange}
+                    placeholder="Filter by city (optional)"
+                    style={{ padding: '8px', width: '100%', boxSizing: 'border-box' }}
+                />
+            </div>
 
-        {/* Doctor Filter Dropdown */}
-         <div style={{ marginBottom: '10px' }}>
-          <label htmlFor="doctor_id">Doctor:</label><br />
-          <select id="doctor_id" name="doctor_id" value={filters.doctor_id} onChange={handleChange} disabled={isLoadingOptions} style={{ padding: '5px', minWidth: '200px', maxWidth: '100%' }}>
-            <option value="">-- All Doctors --</option>
-            {doctorOptions.map((d) => <option key={d.id} value={d.id}>{d.name} ({d.specialization || 'N/A'})</option>)}
-          </select>
-        </div>
+            {/* Doctor Select (Dependent on Hospital) */}
+            <div>
+                <label htmlFor="doctor_id" style={{ display: 'block', marginBottom: '5px' }}>Doctor:</label>
+                <select
+                id="doctor_id"
+                name="doctor_id"
+                value={filters.doctor_id}
+                onChange={handleChange}
+                // Disable if options loading OR if no hospital is selected (preventing selection)
+                disabled={isLoadingOptions || !filters.hospital_id}
+                style={{ padding: '8px', width: '100%', boxSizing: 'border-box' }}
+                >
+                <option value="">-- All Doctors --</option>
+                {doctorOptions?.map(doctor => (  // Optional chaining
+                    <option key={doctor.id} value={doctor.id}>
+                    {doctor.name} ({doctor.specialization || 'N/A'})
+                    </option>
+                ))}
+                </select>
+                {/* Informative message when options are filtered but empty */}
+                {filters.hospital_id && !isLoadingOptions && doctorOptions?.length === 0 && ( // Optional chaining
+                    <small style={{ display: 'block', marginTop: '4px', color: '#666' }}>No doctors found for this hospital.</small>
+                )}
+            </div>
 
-        {/* Specialization Filter Dropdown */}
-        <div style={{ marginBottom: '10px' }}>
-          <label htmlFor="specialization">Specialization:</label><br />
-          <select id="specialization" name="specialization" value={filters.specialization} onChange={handleChange} disabled={isLoadingOptions} style={{ padding: '5px', minWidth: '200px', maxWidth: '100%' }}>
-            <option value="">-- All Specializations --</option>
-            {specializationOptions.map((spec) => <option key={spec} value={spec}>{spec}</option>)}
-          </select>
-        </div>
+            {/* Specialization Select (Dependent on Hospital) */}
+            <div>
+                <label htmlFor="specialization" style={{ display: 'block', marginBottom: '5px' }}>Specialization:</label>
+                <select
+                id="specialization"
+                name="specialization"
+                value={filters.specialization}
+                onChange={handleChange}
+                // Disable if options loading OR if no hospital is selected
+                disabled={isLoadingOptions || !filters.hospital_id}
+                style={{ padding: '8px', width: '100%', boxSizing: 'border-box' }}
+                >
+                <option value="">-- All Specializations --</option>
+                {specializationOptions?.map(spec => ( // Optional chaining
+                    // Assuming specialization is just a string array; adjust if it's objects
+                    <option key={spec} value={spec}>
+                    {spec}
+                    </option>
+                ))}
+                </select>
+                {/* Informative message when options are filtered but empty */}
+                {filters.hospital_id && !isLoadingOptions && specializationOptions?.length === 0 && ( // Optional chaining
+                    <small style={{ display: 'block', marginTop: '4px', color: '#666' }}>No specializations found for this hospital.</small>
+                )}
+            </div>
+        </div> {/* End of filter grid */}
 
-        <button type="submit" disabled={isLoadingOptions || isLoadingReport} style={{ padding: '8px 15px', cursor: 'pointer' }}>
-          {isLoadingReport ? 'Generating...' : 'Generate Report'}
+        {/* Loading Indicator for Options */}
+        {isLoadingOptions && <p style={{ fontStyle: 'italic', color: '#555' }}>Loading filter options...</p>}
+
+        {/* Submit Button */}
+        <button
+          type="submit"
+          disabled={isLoadingOptions || isLoadingReport} // Disable during any loading state
+          style={{
+            padding: '10px 20px',
+            cursor: 'pointer',
+            backgroundColor: (isLoadingOptions || isLoadingReport) ? '#ccc' : '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            fontSize: '1em'
+          }}
+        >
+          {isLoadingReport ? 'Generating Report...' : 'Generate Report'}
         </button>
       </form>
 
-      {/* Display Loading/Error Messages */}
-       {isLoadingOptions && <p>Loading filter options...</p>}
-       {/* Report-specific loading/error shown near results */}
+      {/* Report Results Section */}
+      <hr style={{ margin: '30px 0' }} />
+      <h4 style={{ marginBottom: '15px' }}>Review Report Results</h4>
 
-      <hr />
+      {/* Error Display */}
+      {error && <p style={{ color: 'red', fontWeight: 'bold', border: '1px solid red', padding: '10px', borderRadius: '4px' }}>Error: {error}</p>}
 
-      {/* --- Report Results Section --- */}
-      <h4>Review Report Results</h4>
-      {isLoadingReport && <p>Generating report...</p>}
-      {error && <p style={{ color: 'red' }}>Error: {error}</p>}
+      {/* Loading Indicator for Report */}
+      {isLoadingReport && <p style={{ fontStyle: 'italic', color: '#555' }}>Generating report, please wait...</p>}
 
-      {/* Display Statistics (only if data exists and no error) */}
-      {!isLoadingReport && !error && reportData.length > 0 && (
-         <div style={{ marginBottom: '15px', padding: '10px', border: '1px solid #eee', backgroundColor: '#f9f9f9' }}>
-           <strong>Statistics:</strong><br />
-           <span>Total Reviews Found: {reportStats.reviewCount}</span><br />
-           <span>Average Rating: {reportStats.averageRating ?? 'N/A'}</span><br />
-           {/* Uncomment if you implement other stats */}
-           {/* <span>Average Duration: {reportStats.avgDuration ?? 'N/A'}</span><br />
-           <span>Avg. Invited Students: {reportStats.avgInvited ?? 'N/A'}</span><br />
-           <span>Avg. Accepted Invitations: {reportStats.avgAccepted ?? 'N/A'}</span><br />
-           <span>Avg. Attendance Rate: {reportStats.avgAttendanceRate ?? 'N/A'}</span> */}
-         </div>
+      {/* Statistics Display - Only show if not loading, no error, and data exists */}
+      {!isLoadingReport && !error && reportData?.length > 0 && (  // Optional chaining
+        <div style={{ marginBottom: '20px', padding: '15px', border: '1px solid #eee', backgroundColor: '#f9f9f9', borderRadius: '4px' }}>
+          <strong>Report Statistics:</strong><br />
+          <span style={{ display: 'inline-block', marginRight: '15px' }}>Total Reviews Found: {reportStats?.reviewCount}</span>  {/* Optional chaining */}
+          <span>Average Rating: {reportStats?.averageRating ?? 'N/A'}</span>  {/* Optional chaining */}
+        </div>
       )}
 
-      {/* Display Report Data (Reviews List) (only if data exists and no error) */}
-      {!isLoadingReport && !error && reportData.length > 0 ? (
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-          {reportData.map((review) => (
-            // Ensure keys used here match EXACTLY what your stored procedure returns
-            <li key={review.review_id || review.id} style={{ borderBottom: '1px solid #ccc', marginBottom: '10px', paddingBottom: '10px' }}>
-              <strong>Review ID:</strong> {review.review_id || review.id} | <strong>Rating:</strong> {review.rating} | <strong>Date:</strong> {review.review_date ? new Date(review.review_date).toLocaleDateString() : 'N/A'} <br />
-              <strong>Hospital:</strong> {review.hospital_name || 'N/A'} | <strong>City:</strong> {review.city || 'N/A'} | <strong>State:</strong> {review.state || 'N/A'} <br />
-              {/* Conditionally display doctor info if available in results */}
-              {review.doctor_name && <><strong>Doctor:</strong> {review.doctor_name} | <strong>Specialization:</strong> {review.specialization || 'N/A'} <br /></>}
-              <strong>Comment:</strong> {review.review || 'No comment'}
-            </li>
-          ))}
-        </ul>
-      // Display message if not loading, no error, but no data found
-      ) : !isLoadingReport && !error && (
-        <p>No reviews found matching the criteria, or report not yet generated.</p>
-      )}
+      {/* Report Data List or No Results Message */}
+      {!isLoadingReport && !error ? (
+        reportData?.length > 0 ? (  // Optional chaining
+          <ul style={{ listStyle: 'none', padding: 0 }}>
+            {reportData?.map(review => (  // Optional chaining
+              <li
+                key={review.review_id || review.id} // Use a unique identifier for the key
+                style={{ borderBottom: '1px solid #eee', marginBottom: '15px', paddingBottom: '15px' }}
+              >
+                <p><strong>Review ID:</strong> {review.review_id || review.id} | <strong>Rating:</strong> {review.rating || 'N/A'} |{' '}
+                   <strong>Date:</strong> {review.review_date ? new Date(review.review_date).toLocaleDateString() : 'N/A'}
+                </p>
+                <p><strong>Hospital:</strong> {review.hospital_name || 'N/A'} ({review.city || 'N/A'}, {review.state || 'N/A'})</p>
+                {/* Conditionally display doctor info if available */}
+                {review.doctor_name && (
+                   <p><strong>Doctor:</strong> {review.doctor_name} | <strong>Specialization:</strong> {review.specialization || 'N/A'}</p>
+                )}
+                <p style={{ marginTop: '5px' }}><strong>Comment:</strong><br />
+                  <span style={{ display: 'inline-block', marginTop: '3px', color: '#333' }}>
+                    {review.review || '(No comment provided)'}
+                   </span>
+                </p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          (filters.start_date || filters.end_date || filters.hospital_id || filters.city || filters.doctor_id || filters.specialization ) && 
+             <p>No reviews found matching the specified criteria.</p>
+
+        )
+      ) : null /* Render nothing related to results if loading or error occurred (handled above) */}
     </div>
   );
 }
 
-export default Report;
-
+export default Report; // Ensure the export is present

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { addReview, fetchDoctors } from '../services/api';
 import { UserContext } from '../App';
 
-function ReviewForm({ hospitalId: initialHospitalId = '' }) {
+function ReviewForm({ hospitalId: initialHospitalId = '' , onReviewSuccess}) {
   const { user } = useContext(UserContext);
   const [hospitalId, setHospitalId] = useState(initialHospitalId);
   const [rating, setRating] = useState(5);
@@ -50,6 +50,9 @@ function ReviewForm({ hospitalId: initialHospitalId = '' }) {
       if (!initialHospitalId) {
          setHospitalId('');
       }
+      if (onReviewSuccess) {
+        onReviewSuccess();
+    }
       setRating(5);
       setComment('');
       setSelectedDoctors([]);

@@ -90,8 +90,15 @@ export async function fetchReport(filters) {
   };
   
   // --- NEW: Fetch all distinct specializations for reporting filter ---
-  export const getSpecializations = async () => {
-    const response = await axios.get(`${API_BASE_URL}/doctors/specializations`);
-    console.log("Get Specializations response", response); // Logging for debugging
-    return response; // Return the full Axios response object
-  };
+  export const getSpecializations = async (hospitalId) => {
+    if (!hospitalId) {
+      console.log("getSpecializations: No hospitalId provided, returning empty.");
+      // Return structure similar to a successful empty response
+      return { data: { specializations: [] }, status: 200 };
+   }
+   const response = await axios.get(`${API_BASE_URL}/doctors/specializations`, {
+      params: { hospital_id: hospitalId } // Pass hospitalId as query parameter
+   });
+   console.log(`Get Specializations (Hospital ${hospitalId}) response`, response);
+   return response;
+ };
